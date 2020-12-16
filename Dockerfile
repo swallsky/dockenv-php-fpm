@@ -28,3 +28,11 @@ RUN docker-php-ext-install redis \
     # 如果这段不加构建的镜像将大100M,删除源代码文件
     && rm -rf /usr/src/php
 
+# 安装composer
+ADD ./composer /usr/local/bin/composer
+
+# Composer install
+#RUN curl -sS http://getcomposer.org/installer | php \
+#    && mv composer.phar /usr/local/bin/composer \
+RUN chmod u+x /usr/local/bin/composer \
+    && composer config -g repo.packagist composer https://mirrors.aliyun.com/composer/
