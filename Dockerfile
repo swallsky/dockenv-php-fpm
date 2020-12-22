@@ -3,30 +3,58 @@ FROM php:${PHP_VERSION}-fpm-alpine
 
 USER root
 
-# CHANGE SOURCE && apk upgrade
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories \
-    && apk update \
-    && apk upgrade \
-    && apk add --no-cache openssl \
-    && apk add --no-cache bash
+# 更改镜像源为阿里云
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/' /etc/apk/repositories
 
-# Install the PHP gd zip pdo_mysql extention
-RUN apk add --no-cache freetype libpng libjpeg-turbo freetype-dev libpng-dev libjpeg-turbo-dev \
-    && docker-php-ext-configure gd \
-        --with-gd \
-        --with-freetype-dir=/usr/include/ \
-        --with-png-dir=/usr/include/ \
-        --with-jpeg-dir=/usr/include/ \
-    && NPROC=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || 1) \
-    && docker-php-ext-install -j${NPROC} gd \
-    && docker-php-ext-install pdo_mysql zip mysqli bcmath \
-    && apk del --no-cache freetype-dev libpng-dev libjpeg-turbo-dev
+# 安装相关的依耐包
+RUN apk --update add wget \
+  curl \
+  git \
+  build-base \
+  libmemcached-dev \
+  libmcrypt-dev \
+  libxml2-dev \
+  pcre-dev \
+  zlib-dev \
+  autoconf \
+  cyrus-sasl-dev \
+  libgsasl-dev \
+  oniguruma-dev \
+  openssl \
+  openssl-dev
+
+# 安装 mysqli mbstring pdo pdo_mysql tokenizer xml pcntl
+RUN docker-php-ext-install mysqli mbstring pdo pdo_mysql tokenizer xml pcntl
+
+# 安装BZ2
+RUN apk --update add bzip2-dev; \
+    docker-php-ext-install bz2; 
+
+# 安装GD库
+RUN apk add --update --no-cache freetype-dev libjpeg-turbo-dev jpeg-dev libpng-dev; \
+    #7.4 安装参数发生变化 @https://www.php.net/manual/zh/migration74.other-changes.php#migration74.other-changes.pkg-config
+    if [ ${PHP_VERSION} = "7.4" ]; then \
+        docker-php-ext-configure gd --with-freetype=/usr/lib/ --with-jpeg=/usr/lib/ --with-webp=/usr/lib/ && \
+        docker-php-ext-install gd \
+    else \
+        docker-php-ext-configure gd --with-freetype-dir=/usr/lib/ --with-jpeg-dir=/usr/lib/ --with-png-dir=/usr/lib/ && \
+        docker-php-ext-install gd \
+    ;fi
+
+# 安装ZipArchive
+RUN apk --update add libzip-dev && \
+    if [ ${PHP_VERSION} = "7.3" ] || [ ${PHP_VERSION} = "7.4" ]; then \
+      docker-php-ext-configure zip \
+    else \
+      docker-php-ext-configure zip --with-libzip \
+    ;fi && \
+    # Install the zip extension
+    docker-php-ext-install zip
 
 # 安装redis扩展
-ADD ./phpredis-3.1.6 /usr/src/php/ext/redis
-RUN docker-php-ext-install redis \
-    # 如果这段不加构建的镜像将大100M,删除源代码文件
-    && rm -rf /usr/src/php
+RUN pecl install -o -f redis \
+    &&  rm -rf /tmp/pear \
+    &&  docker-php-ext-enable redis
 
 # 安装composer
 ADD ./composer /usr/local/bin/composer
