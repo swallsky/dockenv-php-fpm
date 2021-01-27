@@ -4,11 +4,15 @@ FROM php:${PHP_VERSION}-fpm-alpine
 USER root
 
 # 更改镜像源为阿里云
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/' /etc/apk/repositories
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/' /etc/apk/repositories \
+    && apk update \
+    && apk upgrade \
+    && apk add --no-cache bash
 
 # 安装相关的依耐包
 RUN apk --update add wget \
   curl \
+  curl-dev \
   git \
   build-base \
   libmemcached-dev \
@@ -21,14 +25,14 @@ RUN apk --update add wget \
   libgsasl-dev \
   oniguruma-dev \
   openssl \
-  openssl-dev
+  openssl-dev \
+  g++ \
+  libtool \
+  make \
+  linux-headers 
 
-# 安装 mysqli mbstring pdo pdo_mysql tokenizer xml pcntl
-RUN docker-php-ext-install mysqli mbstring pdo pdo_mysql tokenizer xml pcntl
-
-# 安装BZ2
-RUN apk --update add bzip2-dev; \
-    docker-php-ext-install bz2; 
+# 安装 mysqli mbstring pdo pdo_mysql xml pcntl
+RUN docker-php-ext-install pdo pdo_mysql mysqli mbstring bcmath
 
 # 安装GD库
 RUN apk add --update --no-cache freetype-dev libjpeg-turbo-dev jpeg-dev libpng-dev; \
@@ -64,3 +68,25 @@ ADD ./composer /usr/local/bin/composer
 #    && mv composer.phar /usr/local/bin/composer \
 RUN chmod u+x /usr/local/bin/composer \
     && composer config -g repo.packagist composer https://mirrors.aliyun.com/composer/
+
+
+# Swoole install
+RUN docker-php-ext-install -j 2 sockets \
+    && wget https://github.com/swoole/swoole-src/archive/v4.6.2.tar.gz -O swoole.tar.gz \
+    && mkdir -p swoole \
+    && tar -xf swoole.tar.gz -C swoole --strip-components=1 \
+    && rm swoole.tar.gz \
+    && ( \
+    cd swoole \
+    && phpize \
+    && ./configure --enable-sockets --enable-swoole-json --enable-swoole-curl --enable-mysqlnd --enable-openssl --enable-http2 \
+    && make -j$(nproc) \
+    && make install \
+    ) \
+    && rm -r swoole \
+    && docker-php-ext-enable swoole
+
+# Clean up
+RUN rm /var/cache/apk/* \
+    && mkdir -p /var/www \
+    && rm -rf /usr/src/php
