@@ -1,5 +1,7 @@
-ARG PHP_VERSION=${PHP_VERSION}
+ARG PHP_VERSION
 FROM php:${PHP_VERSION}-fpm-alpine
+LABEL maintainer="JackXu <xjz1688@163.com>"
+ARG PHP_VERSION
 
 USER root
 
@@ -34,26 +36,26 @@ RUN apk --update add wget \
 # 安装 mysqli mbstring pdo pdo_mysql xml pcntl
 RUN docker-php-ext-install pdo pdo_mysql mysqli mbstring bcmath
 
-# 安装GD库
+# 安装GD库 7.4 安装参数发生变化 @https://www.php.net/manual/zh/migration74.other-changes.php#migration74.other-changes.pkg-config
 RUN apk add --update --no-cache freetype-dev libjpeg-turbo-dev jpeg-dev libpng-dev; \
-    #7.4 安装参数发生变化 @https://www.php.net/manual/zh/migration74.other-changes.php#migration74.other-changes.pkg-config
     if [ ${PHP_VERSION} = "7.4" ]; then \
-        docker-php-ext-configure gd --with-freetype=/usr/lib/ --with-jpeg=/usr/lib/ --with-webp=/usr/lib/ && \
-        docker-php-ext-install gd \
+        docker-php-ext-configure gd --with-freetype=/usr/lib/ --with-jpeg=/usr/lib/ && \
+        docker-php-ext-install gd; \
     else \
         docker-php-ext-configure gd --with-freetype-dir=/usr/lib/ --with-jpeg-dir=/usr/lib/ --with-png-dir=/usr/lib/ && \
         docker-php-ext-install gd \
     ;fi
 
+
 # 安装ZipArchive
 RUN apk --update add libzip-dev && \
     if [ ${PHP_VERSION} = "7.3" ] || [ ${PHP_VERSION} = "7.4" ]; then \
-      docker-php-ext-configure zip \
+      docker-php-ext-configure zip && \
+      docker-php-ext-install zip; \
     else \
-      docker-php-ext-configure zip --with-libzip \
-    ;fi && \
-    # Install the zip extension
-    docker-php-ext-install zip
+      docker-php-ext-configure zip --with-libzip && \
+      docker-php-ext-install zip \
+    ;fi
 
 # 安装redis扩展
 RUN pecl install -o -f redis \
