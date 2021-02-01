@@ -88,6 +88,10 @@ RUN docker-php-ext-install -j 2 sockets \
     && rm -r swoole \
     && docker-php-ext-enable swoole
 
+# 安装mongo
+RUN pecl install mongodb && \
+    docker-php-ext-enable mongodb
+
 # Clean up
 RUN rm /var/cache/apk/* \
     && mkdir -p /var/www \
