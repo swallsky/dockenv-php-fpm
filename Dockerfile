@@ -88,8 +88,8 @@ RUN docker-php-ext-install -j 2 sockets \
     && rm -r swoole \
     && docker-php-ext-enable swoole
 
-# 安装mongo
-RUN pecl install mongodb && \
+# 安装 mongodb-1.8.2
+RUN pecl install mongodb-1.8.2 && \
     docker-php-ext-enable mongodb
 
 # Clean up
