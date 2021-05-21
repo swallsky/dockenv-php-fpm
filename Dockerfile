@@ -88,9 +88,9 @@ RUN docker-php-ext-install -j 2 sockets \
     && rm -r swoole \
     && docker-php-ext-enable swoole
 
-# 安装 mongodb-1.8.2
-RUN pecl install mongodb-1.8.2 && \
-    docker-php-ext-enable mongodb
+# 安装 memcached、mongodb-1.8.2
+RUN pecl install memcached mongodb-1.8.2 && \
+    docker-php-ext-enable memcached mongodb
 
 # Clean up
 RUN rm /var/cache/apk/* \
